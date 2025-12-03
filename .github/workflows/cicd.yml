@@ -8,10 +8,16 @@ on:
 
 env:
   python_version: 3.11
-
+  IMAGE_NAME: portfolio
+  AWS_REGION: us-east-1
+  ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
+  ECR_REPO: $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_NAME
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
@@ -21,5 +27,12 @@ jobs:
         run: pip install -r requirements.txt
       - name: unit test
         run: pytest test.py
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{secrets.ROLE_ARN}}
+          aws-region: ${{ env.AWS_REGION }} 
+      - name: check credential
+        run: aws s3 ls    
       - name: Build image
-        run: docker build -t kserge2001/portcicd .
+        run: docker build -t bberny2016/portcicd .
