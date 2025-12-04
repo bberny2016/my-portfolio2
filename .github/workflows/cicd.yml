@@ -12,6 +12,7 @@ env:
   AWS_REGION: us-east-1
   ACCOUNT_ID: ${{ secrets.ACCOUNT_ID }}
   ECR_REPO: ${{ secrets.ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/dev
+  IMAGE_TAG: ${{github.sha}}
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,7 +35,6 @@ jobs:
           aws-region: ${{ env.AWS_REGION }} 
       - name: check credential
         run: aws s3 ls  
-
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
@@ -43,14 +43,14 @@ jobs:
           docker build -t ${{ env.IMAGE_NAME }} .
       - name: Tag Docker image
         run: |
-          docker tag ${{ env.IMAGE_NAME }}:latest ${{ env.ECR_REPO }}:latest
+          docker tag ${{ env.IMAGE_NAME }}:latest ${{ env.ECR_REPO }}:${{ env.IMAGE_TAG }}
       - name: Scan Docker image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.ECR_REPO }}:latest
+          image-ref: ${{ env.ECR_REPO }}:${{env.IMAGE_TAG}}
           format: table
-          exit-code: '0' # fail workflow on critical/high vulnerabilities
+          exit-code: '1' # fail workflow on critical/high vulnerabilities
           severity: CRITICAL,HIGH
       - name: Push Docker image to Amazon ECR
         run: |
-          docker push ${{ env.ECR_REPO }}:latest
+          docker push ${{ env.ECR_REPO }}:${{env.IMAGE_TAG}}
